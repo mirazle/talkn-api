@@ -1,14 +1,15 @@
-import Window from './Window';
 import { Types } from '@common/models';
+import Window from '@api/Window';
 
-export type PublicApiMethodsType = {
+type PublicApiMethods = {
   [key: string]: Function | string;
 };
 
-export class PublicApi {
+// TODO: 1インスタンスが複数のIOを持つのは違和感(管理が煩雑)。1インスタンス1IOにして、ユーザーがコントロール出来るようにする
+export default class PublicApi {
   constructor(_win: Window) {
     const { api, store } = _win;
-    const publicApiMethods: PublicApiMethodsType = {
+    const publicApiMethods: PublicApiMethods = {
       ver: '2023/12/12',
       on: (ch: string) => api('onResponseChAPI', ch),
       useIo: (id: string) => api('use', id),

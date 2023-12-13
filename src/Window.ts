@@ -1,11 +1,11 @@
-import WssWorker from 'worker-loader?inline=fallback&publicPath=/&filename=WssWorker.js!./WssWorker';
+import WssWorker from 'worker-loader?inline=fallback&publicPath=/&filename=WssWorker.js!./wss/worker';
 
 import PostMessage, { MessageClientAndWsApiType, MessageParams } from '@common/PostMessage';
 import { Types } from '@common/models';
 import Sequence from '@common/Sequence';
 import define from '@common/define';
-import apiStore from '@redux/store';
 import { generateQniqueKey } from '@common/utils';
+import apiStore from '@api/redux/store';
 
 export default class Window {
   id: string;

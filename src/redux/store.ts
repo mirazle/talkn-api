@@ -1,7 +1,7 @@
 import { configureStore } from '@reduxjs/toolkit';
 
-import apiMiddlewares from '@redux/middleware';
-import apiReducers from '@redux/reducers';
+import apiMiddlewares from '@api/redux/middleware';
+import apiReducers from '@api/redux/reducers';
 
 declare global {
   interface Module {
@@ -19,8 +19,8 @@ const apiStore = configureStore({
 });
 
 if (process.env.NODE_ENV !== 'production' && module.hot) {
-  module.hot.accept('@redux/reducers', () => {
-    const newRootReducer = require('@redux/reducers').default;
+  module.hot.accept('@api/redux/reducers', () => {
+    const newRootReducer = require('@api/redux/reducers').default;
     apiStore.replaceReducer(newRootReducer);
   });
 }

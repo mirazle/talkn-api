@@ -6,13 +6,13 @@ import conf from '@common/conf';
 import define from '@common/define';
 import { isValidKey } from '@common/utils';
 
-import WsClientToApiRequestActions from '@redux/actions/apiToServerRequest';
-import WsServerToApiBroadcastAction from '@redux/actions/serverToApiBradcast';
-import WsServerToApiEmitAction from '@redux/actions/serverToApiEmit';
-import apiStore, { ApiStore, ReduxState } from '@redux/store';
+import WsClientToApiRequestActions from '@api/redux/actions/apiToServerRequest';
+import WsServerToApiBroadcastAction from '@api/redux/actions/serverToApiBradcast';
+import WsServerToApiEmitAction from '@api/redux/actions/serverToApiEmit';
+import apiStore, { ApiStore, ReduxState } from '@api/redux/store';
 
-import WsApiWorker from './WssWorker';
-import ApiState from './state';
+import WsApiWorker from './worker';
+import ApiState from '../state';
 
 type TalknClientIo = Socket & { _callbacks: { [key: string]: Function } };
 

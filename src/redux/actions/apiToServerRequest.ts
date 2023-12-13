@@ -1,5 +1,5 @@
 import Sequence from '@common/Sequence';
-import { ReduxState } from '@redux/store';
+import { ReduxState } from '@api/redux/store';
 /*
 type BeforeFunction  = {
   (reduxState: ApiState, requestState: any, actionState: any): any;

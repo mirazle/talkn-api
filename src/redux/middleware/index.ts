@@ -1,5 +1,5 @@
 import { Middleware, Dispatch } from '@reduxjs/toolkit';
-import { ReduxState } from '../store';
+import { ReduxState } from '@api/redux/store';
 
 type Action = {
   type: string;

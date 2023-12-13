@@ -1,5 +1,5 @@
-import { Types, inits } from '@common/models';
-import { ReduxState } from '@redux/store';
+import { Types } from '@common/models';
+import { ReduxState } from '@api/redux/store';
 
 export default class ApiState {
   bootOption: Types['BootOption'];
