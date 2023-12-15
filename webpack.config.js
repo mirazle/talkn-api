@@ -22,7 +22,7 @@ module.exports = {
   },
   resolve: {
     alias: {
-      '@redux': path.resolve(homeDir, 'talkn-api/src/redux') + '/',
+      '@api': path.resolve(homeDir, 'talkn-api/src') + '/',
       '@common': path.resolve(homeDir, 'talkn-common/src') + '/',
     },
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

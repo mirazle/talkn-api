@@ -12,7 +12,7 @@
     "noImplicitAny": true,
     "paths": {
       "@common/*": ["../talkn-common/src/*"],
-      "@redux/*": ["./src/redux/*"]
+      "@api/*": ["./src/*"]
     }
   },
   // コンパイル対象

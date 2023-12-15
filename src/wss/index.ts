@@ -9,10 +9,10 @@ import { isValidKey } from '@common/utils';
 import WsClientToApiRequestActions from '@api/redux/actions/apiToServerRequest';
 import WsServerToApiBroadcastAction from '@api/redux/actions/serverToApiBradcast';
 import WsServerToApiEmitAction from '@api/redux/actions/serverToApiEmit';
+import ApiState from '@api/state';
 import apiStore, { ApiStore, ReduxState } from '@api/redux/store';
 
 import WsApiWorker from './worker';
-import ApiState from '../state';
 
 type TalknClientIo = Socket & { _callbacks: { [key: string]: Function } };
 
@@ -102,11 +102,11 @@ export default class Wss {
   private getIoParams(bootOption: Types['BootOption']): string {
     let params = '';
     Object.keys(bootOption).forEach((key) => {
-      if (key === 'id') return;
-      if (key === 'defaultProps') return;
-      if (isValidKey(key, bootOption)) {
-        const value = bootOption[key];
-        params += `${key}=${encodeURIComponent(value)}&`;
+      if (key === 'connection') {
+        if (isValidKey(key, bootOption)) {
+          const value = bootOption[key];
+          params += `${key}=${encodeURIComponent(value)}&`;
+        }
       }
     });
     return params.replace(/&$/, '');
@@ -140,6 +140,10 @@ export default class Wss {
     }
   }
 
+  private tuned() {
+    this.webWorker.postMessage('TUNED', { id: this.id, ioType: Sequence.API_SETUP });
+  }
+
   private untune(bootOption: Types['BootOption']) {
     const id = bootOption && bootOption.id ? bootOption.id : this.id;
     if (this.ios[id]) {
@@ -152,10 +156,6 @@ export default class Wss {
       return true;
     }
     return false;
-  }
-
-  private tuned() {
-    this.webWorker.postMessage('TUNED', { id: this.id, ioType: Sequence.API_SETUP });
   }
 
   private onRequestAPI() {

@@ -25,7 +25,7 @@ export default (state: Types['Rank'][] = [], action: Action) => {
   switch (action.type) {
     case 'SERVER_TO_API[EMIT]:fetchPosts':
       if (tuneCh && posts) {
-        if (tuneCh.isLinkCh || postsCnt === 0) return state;
+        if (postsCnt === 0) return state;
 
         return state.map((rank: Types['Rank']) => {
           if (tuneCh.connection === rank.connection) {
