@@ -1,12 +1,11 @@
-import Window from '@api/Window';
+import Manager from '@api/Manager';
 import PublicApi from '@api/public.api';
 
-const apiWindow = new Window();
+const manager = new Manager();
 
 window.talknAPI = new Promise((resolve) => {
-  apiWindow.boot().then((_window) => {
-    const publicApi: PublicApi = new PublicApi(_window as Window);
-    window.talknAPI = publicApi;
+  manager.boot().then((_window) => {
+    const publicApi: PublicApi = new PublicApi(_window as Manager);
     resolve(publicApi);
   });
 });

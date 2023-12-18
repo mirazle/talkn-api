@@ -12,25 +12,26 @@ import WsServerToApiEmitAction from '@api/redux/actions/serverToApiEmit';
 import ApiState from '@api/state';
 import apiStore, { ApiStore, ReduxState } from '@api/redux/store';
 
-import WsApiWorker from './worker';
+import WssWorker from '.';
 
-type TalknClientIo = Socket & { _callbacks: { [key: string]: Function } };
+type SocketCustom = Socket & { _callbacks: { [key: string]: Function } };
 
-// TODO: ワーカーは子ワーカーを生成できる(パフォーマンス向上)
-export default class Wss {
+// storesを剥ぎ取る
+// ioのリクエストとレスポンスを受け取るのに専念する
+export default class Request {
   id: string;
-  webWorker: WsApiWorker;
-  stores: { [key: string]: ApiStore };
-  ios: { [key: string]: TalknClientIo };
+  wssWorker: WssWorker;
+  ios: { [id: string]: SocketCustom };
+  stores: { [id: string]: ApiStore };
   methods: { [key: string]: Function };
   publicCallbacks: { [key: string]: Function };
   static get server() {
     return conf.env === define.DEVELOPMENT || conf.env === define.LOCALHOST ? define.DEVELOPMENT_DOMAIN : define.PRODUCTION_DOMAIN;
   }
   static get option() {
-    return { forceNew: false };
+    return { forceNew: true };
   }
-  constructor(webWorker: WsApiWorker) {
+  constructor(wssWorker: WssWorker) {
     this.id = '';
     this.use = this.use.bind(this);
     this.tune = this.tune.bind(this);
@@ -48,8 +49,8 @@ export default class Wss {
     this.ios = {};
     this.methods = {};
     this.publicCallbacks = {};
-    this.webWorker = webWorker;
-    this.webWorker.postMessage('WS_CONSTRUCTED', { ioType: Sequence.API_SETUP });
+    this.wssWorker = wssWorker;
+    this.wssWorker.postMessage('WSS_CONSTRUCTED', { ioType: Sequence.API_SETUP });
   }
 
   // change io connection.
@@ -82,9 +83,9 @@ export default class Wss {
         const actionState = actionMethod(response);
         if (isValidKey(this.id, this.stores)) {
           const store = this.stores[this.id] as any; // TODO: resolve any
-
           // dispatchメソッドの存在をチェック
           if (store && 'dispatch' in store) {
+            // ここでdispatch?????
             store.dispatch(actionState);
           }
         }
@@ -99,36 +100,36 @@ export default class Wss {
     this.off(connection);
   }
 
-  private getIoParams(bootOption: Types['BootOption']): string {
-    let params = '';
-    Object.keys(bootOption).forEach((key) => {
-      if (key === 'connection') {
-        if (isValidKey(key, bootOption)) {
-          const value = bootOption[key];
-          params += `${key}=${encodeURIComponent(value)}&`;
-        }
-      }
-    });
-    return params.replace(/&$/, '');
-  }
-
   private tune(bootOption: Types['BootOption']) {
     if (!this.use(bootOption.id)) {
+      const getIoParams = (bootOption: Types['BootOption']) => {
+        let params = '';
+        Object.keys(bootOption).forEach((key) => {
+          if (key === 'connection') {
+            if (isValidKey(key, bootOption)) {
+              const value = bootOption[key];
+              params += `${key}=${encodeURIComponent(value)}&`;
+            }
+          }
+        });
+        return params.replace(/&$/, '');
+      };
+
       // id
       this.id = bootOption.id;
 
       // store.
       this.stores[this.id] = apiStore;
-      this.stores[this.id].subscribe(this.subscribe);
+      this.stores[this.id].subscribe(this.subscribe); // 必要？
       const apiState = new ApiState({ bootOption });
 
       this.stores[this.id].dispatch({ ...apiState, type: 'SETUPED_API_STORE' });
 
       // ws server.
-      const ioParams = this.getIoParams(bootOption);
-      const endpoint = `${Sequence.WSS_PROTOCOL}//${Wss.server}:${define.PORTS.SOCKET_IO}?${ioParams}`;
+      const ioParams = getIoParams(bootOption);
+      const endpoint = `${Sequence.WSS_PROTOCOL}//${Request.server}:${define.PORTS.SOCKET_IO}?${ioParams}`;
 
-      this.ios[this.id] = io(endpoint, Wss.option) as TalknClientIo;
+      this.ios[this.id] = io(endpoint, Request.option) as SocketCustom;
       this.ios[this.id].on('connect', this.tuned);
 
       this.onResponseChAPI(bootOption.connection);
@@ -141,7 +142,7 @@ export default class Wss {
   }
 
   private tuned() {
-    this.webWorker.postMessage('TUNED', { id: this.id, ioType: Sequence.API_SETUP });
+    this.wssWorker.postMessage('TUNED', { id: this.id, ioType: Sequence.API_SETUP });
   }
 
   private untune(bootOption: Types['BootOption']) {
@@ -214,7 +215,7 @@ export default class Wss {
     const actionType = apiState.logs[0];
     const ioType = Sequence.convertServerToApiIoType(this.id, actionType);
     this.exeCallback(actionType, apiState);
-    this.webWorker.postMessage(actionType, { ...apiState, ioType });
+    this.wssWorker.postMessage(actionType, { ...apiState, ioType });
   }
 
   private exeCallback(method: string, apiState: ApiState) {

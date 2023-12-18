@@ -1,5 +1,5 @@
-import { Types, inits } from '@common/models';
-import Window from '@api/Window';
+import { inits } from '@common/models';
+import Window from '@api/Manager';
 
 type PublicApiMethods = {
   [key: string]: Function | string;
@@ -15,17 +15,41 @@ export default class PublicApi {
       return api('tune', bootOption, callback);
     };
 
+    const untune = (ch: string, callback?: Function) => {
+      const bootOption = { ...inits.bootOption, connection: ch };
+      return api('untune', bootOption, callback);
+    };
+
+    const fetchRank = (ch: string, callback?: Function) => {
+      const bootOption = { ...inits.bootOption, connection: ch };
+      return api('fetchRank', bootOption, callback);
+    };
+
+    const fetchPosts = (ch: string, callback?: Function) => {
+      const bootOption = { ...inits.bootOption, connection: ch };
+      return api('fetchPosts', bootOption, callback);
+    };
+
+    const fetchChDetail = (ch: string, callback?: Function) => {
+      const bootOption = { ...inits.bootOption, connection: ch };
+      return api('fetchChDetail', bootOption, callback);
+    };
+
+    const post = (ch: string, callback?: Function) => {
+      const bootOption = { ...inits.bootOption, connection: ch };
+      return api('post', bootOption, callback);
+    };
+
     const publicApiMethods: PublicApiMethods = {
       ver: '2023/12/12',
-      // on: (ch: string) => api('onResponseChAPI', ch),
-      useIo: (id: string) => api('use', id),
+      use: (id: string) => api('use', id),
       tune,
-      untune: (id: string) => api('untune', { id }),
-      fetchRank: (ch: string) => api('rank', { thread: { ch } }),
-      fetchPosts: (ch: string) => api('fetchPosts', { thread: { ch } }),
-      fetchChDetail: (ch: string) => api('fetchChDetail', { thread: { ch } }),
-      post: (params = {}) => api('post', { tuneCh: { ...params } }),
-      // getState: () => store.getState(),
+      untune,
+      fetchRank,
+      fetchPosts,
+      fetchChDetail,
+      post,
+      getState: () => store.getState(),
     };
     return publicApiMethods;
   }
