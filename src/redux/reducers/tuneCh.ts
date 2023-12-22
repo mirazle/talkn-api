@@ -6,6 +6,5 @@ type Action = {
 };
 
 export default (state: Types['Ch'] = inits.ch, action: Action) => {
-  console.log('REDUCER', action.type, action);
   return action.tuneCh ? { ...action.tuneCh } : state;
 };

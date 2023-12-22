@@ -1,11 +1,6 @@
-import Manager from '@api/Manager';
+import createStoresDispatcher from '@api/wssWorker/StoresDispatcher';
 import PublicApi from '@api/public.api';
 
-const manager = new Manager();
-
-window.talknAPI = new Promise((resolve) => {
-  manager.boot().then((_window) => {
-    const publicApi: PublicApi = new PublicApi(_window as Manager);
-    resolve(publicApi);
-  });
+createStoresDispatcher().then((storesDispatcher) => {
+  window.talknAPI = new PublicApi(storesDispatcher);
 });
