@@ -1,5 +1,4 @@
 import { PostMessage, OnMessage } from '@common/PostMessage';
-import { ApiStore } from '@api/redux/store';
 import ToServer from './ToServer';
 
 export const statusStop = 'stop';
@@ -31,16 +30,16 @@ export default class WssWorker {
     this.toServer = new ToServer(this);
   }
 
-  public postMessage({ uid, method, params }: PostMessage): void {
-    if (uid && method) {
-      this.worker.postMessage({ uid, method, params });
+  public postMessage({ pid, method, params }: PostMessage): void {
+    if (pid && method) {
+      this.worker.postMessage({ pid, method, params });
     }
   }
 
   private onMessage(e: MessageEvent): void {
-    const { uid, method, params }: OnMessage = e.data;
-    if (uid && method && params) {
-      this.toServer.exe(uid, method, params);
+    const { pid, method, params }: OnMessage = e.data;
+    if (pid && method && params) {
+      this.toServer.exe(pid, method, params);
     }
   }
 

@@ -1,6 +1,5 @@
 import io, { Socket } from 'socket.io-client';
 
-import { Types } from '@common/models';
 import Sequence from '@common/Sequence';
 import conf from '@common/conf';
 import define from '@common/define';
@@ -14,7 +13,7 @@ type SocketCustom = Socket & { _callbacks: { [key: string]: Function } };
 
 // 複数のioのリクエストとレスポンスを受け取るのに専念する
 export default class ToServer {
-  id: string;
+  pid: string;
   ios: { [id: string]: SocketCustom };
   methods: { [key: string]: Function };
   wssWorker: WssWorker;
@@ -32,20 +31,20 @@ export default class ToServer {
     this.onResponseBoardcast = this.onResponseBoardcast.bind(this);
     this.offResponse = this.offResponse.bind(this);
 
-    this.id = '';
+    this.pid = '';
     this.ios = {};
     this.methods = {};
     this.wssWorker = wssWorker;
   }
 
   // change io connection.
-  public setId(id: string): void {
-    if (id && id !== this.id) {
-      if (isValidKey(id, this.ios)) {
-        this.ios[id]['disconnect']();
-        delete this.ios[id];
+  public setId(pid: string): void {
+    if (pid && pid !== this.pid) {
+      if (isValidKey(pid, this.ios)) {
+        this.ios[pid]['disconnect']();
+        delete this.ios[pid];
       }
-      this.id = id;
+      this.pid = pid;
     }
   }
 
@@ -59,49 +58,53 @@ export default class ToServer {
     }
   }
 
-  private onResponseEmit(uid: string, connection: string) {
-    if (!this.ios[uid]._callbacks[connection]) {
-      this.ios[uid].on(Sequence.EMIT_ME_KEY, (response: any) => {
-        this.wssWorker.postMessage({ uid, method: response.type, params: response });
+  private onResponseEmit(pid: string, connection: string) {
+    if (!this.ios[pid]._callbacks[connection]) {
+      this.ios[pid].on(Sequence.EMIT_ME_KEY, (response: any) => {
+        console.log('EMIT ME');
+        this.wssWorker.postMessage({ pid, method: response.type, params: response });
       });
     }
   }
 
-  private onResponseBoardcast(uid: string, connection: string) {
-    if (!this.ios[uid]._callbacks[connection]) {
-      this.ios[uid].on(connection, (response: any) => {
-        this.wssWorker.postMessage({ uid, method: response.type, params: response });
+  private onResponseBoardcast(pid: string, connection: string) {
+    if (!this.ios[pid]._callbacks[connection]) {
+      this.ios[pid].on(connection, (response: any) => {
+        console.log('BROARDCAST ME');
+        this.wssWorker.postMessage({ pid, method: response.type, params: response });
       });
     }
   }
 
-  private offResponse(uid: string, connection: string) {
-    if (this.ios[uid] && this.ios[uid]._callbacks[uid]) {
-      this.ios[uid].off(uid);
-      this.ios[uid].off(connection);
+  private offResponse(pid: string, connection: string) {
+    if (this.ios[pid] && this.ios[pid]._callbacks[pid]) {
+      this.ios[pid].off(pid);
+      this.ios[pid].off(connection);
     }
   }
 
-  private tune(uid: string, params: any): void {
+  private tune(pid: string, params: any): void {
     const { connection } = params;
-    const endpoint = `${Sequence.WSS_PROTOCOL}//${ToServer.domain}:${define.PORTS.SOCKET_IO}?connection=${connection}&uid=${uid}`;
+    const endpoint = `${Sequence.WSS_PROTOCOL}//${ToServer.domain}:${define.PORTS.SOCKET_IO}?connection=${connection}&pid=${pid}`;
 
-    this.setId(uid);
-    this.ios[uid] = io(endpoint, ToServer.option) as SocketCustom;
-    this.ios[uid].on('connect', () => this.wssWorker.postMessage({ uid, method: statusTuned }));
+    this.setId(pid);
+    this.ios[pid] = io(endpoint, ToServer.option) as SocketCustom;
+    this.ios[pid].on('connect', () => {
+      console.log('CONNECT');
+      this.wssWorker.postMessage({ pid, method: statusTuned });
+    });
 
-    this.onResponseEmit(uid, connection);
-    this.onResponseBoardcast(uid, connection);
-    this.onRequest(uid);
-    this.wssWorker.postMessage({ uid, method: statusTunning });
+    this.onResponseEmit(pid, connection);
+    this.onResponseBoardcast(pid, connection);
+    this.onRequest(pid);
+    this.wssWorker.postMessage({ pid, method: statusTunning });
   }
 
-  private untune(bootOption: Types['BootOption']): void {
-    const { id } = bootOption;
-    this.setId(id);
+  private untune(pid: string): void {
+    this.setId(pid);
   }
 
-  private onRequest(uid: string) {
+  private onRequest(pid: string) {
     const actions = WsClientToApiRequestActions;
     const actionKeys = Object.keys(actions);
     const actionLength = actionKeys.length;

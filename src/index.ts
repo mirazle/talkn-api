@@ -1,6 +1,6 @@
 import createStoresDispatcher from '@api/wssWorker/StoresDispatcher';
 import PublicApi from '@api/public.api';
 
-createStoresDispatcher().then((storesDispatcher) => {
+createStoresDispatcher({ isTuneSameCh: true, isTuneMultiCh: true }).then((storesDispatcher) => {
   window.talknAPI = new PublicApi(storesDispatcher);
 });
