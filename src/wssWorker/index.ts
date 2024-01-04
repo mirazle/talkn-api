@@ -1,19 +1,35 @@
-import { PostMessage, OnMessage } from '@common/PostMessage';
+import ApiState from '@api/state';
 import ToServer from './ToServer';
 
-export const statusStop = 'stop';
-export const statusBooting = 'booting';
+export type Pid = string;
+export type TuneId = string;
+
+export type PostMessage = {
+  tuneId: TuneId;
+  method: string;
+  pid?: Pid;
+  apiState?: Partial<ApiState>;
+};
+
+export type OnMessage = PostMessage;
+
 export const statusTunning = 'tunning';
 export const statusTuned = 'tuned';
-export const statusRequest = 'statusRequest';
-export const statusResponse = 'statusResponse';
+export const statusUnTunning = 'untunning';
+export const statusRequesting = 'requesting';
+export const statusResponsing = 'responsing';
+export const statusResponsed = 'responsed';
+export const statusDispatching = 'dispatching';
+export const statusDispatched = 'dispatched';
 export type Status =
-  | typeof statusStop
-  | typeof statusBooting
   | typeof statusTunning
   | typeof statusTuned
-  | typeof statusRequest
-  | typeof statusResponse;
+  | typeof statusUnTunning
+  | typeof statusRequesting
+  | typeof statusResponsing
+  | typeof statusResponsed
+  | typeof statusDispatching
+  | typeof statusDispatched;
 
 // MEMO: ワーカーはワーカーを生成できる
 export default class WssWorker {
@@ -30,16 +46,16 @@ export default class WssWorker {
     this.toServer = new ToServer(this);
   }
 
-  public postMessage({ pid, method, params }: PostMessage): void {
-    if (pid && method) {
-      this.worker.postMessage({ pid, method, params });
+  public postMessage({ pid, tuneId, method, apiState }: PostMessage): void {
+    if (pid && tuneId && method) {
+      this.worker.postMessage({ pid, tuneId, method, apiState });
     }
   }
 
   private onMessage(e: MessageEvent): void {
-    const { pid, method, params }: OnMessage = e.data;
-    if (pid && method && params) {
-      this.toServer.exe(pid, method, params);
+    const { pid, tuneId, method, apiState }: OnMessage = e.data;
+    if (pid && tuneId && method && apiState) {
+      this.toServer.exe(pid, tuneId, method, apiState);
     }
   }
 

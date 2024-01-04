@@ -7,7 +7,7 @@ import postsTimeline from './postsTimeline';
 import postsTimelineStock from './postsTimelineStock';
 import ranks from './ranks';
 import chDetail from './chDetail';
-import tunedChs from './tunedChs';
+// import tunedChs from './tunedChs';
 import tuneCh from './tuneCh';
 
 export const reducers = {
@@ -18,7 +18,7 @@ export const reducers = {
   postsTimeline,
   postsTimelineStock,
   chDetail,
-  tunedChs,
+  //  tunedChs,
   logs,
 };
 

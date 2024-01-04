@@ -3,14 +3,14 @@ import { ReduxState } from '@api/redux/store';
 
 export default class ApiState {
   bootOption: Types['BootOption'];
-  ranks?: Types['Rank'][];
-  tuneCh?: Types['Ch'];
-  chDetail?: Types['ChDetail'];
-  posts?: Types['Post'][];
-  postsTimeline?: Types['Post'][];
-  postsTimelineStock?: Types['Post'][];
-  tunedChs?: { [key: string]: Types['Ch'] };
-  logs?: string[];
+  ranks: Types['Rank'][];
+  tuneCh: Types['Ch'];
+  chDetail: Types['ChDetail'];
+  posts: Types['Post'][];
+  postsTimeline: Types['Post'][];
+  postsTimelineStock: Types['Post'][];
+  // tunedChs: { [key: string]: Types['Ch'] };
+  logs: string[];
   constructor(reduxState: Partial<ReduxState> = {}) {
     this.bootOption = reduxState?.bootOption || (reduxState?.bootOption as Types['BootOption']);
     this.ranks = reduxState?.ranks || [];
@@ -19,7 +19,7 @@ export default class ApiState {
     this.posts = reduxState?.posts || [];
     this.postsTimeline = reduxState?.postsTimeline || [];
     this.postsTimelineStock = reduxState?.postsTimelineStock || [];
-    this.tunedChs = reduxState?.tunedChs || {};
+    // this.tunedChs = reduxState?.tunedChs || {};
     this.logs = [];
   }
 }

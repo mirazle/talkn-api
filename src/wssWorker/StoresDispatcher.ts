@@ -1,15 +1,16 @@
 import WssWorker from 'worker-loader?inline=fallback&publicPath=/&filename=WssWorker.js!./';
 
-import { init as bootOptionInit } from '@common/models/BootOption';
+import { inits } from '@common/models';
 import { generateQniqueKey, generateQniqueKeySeparator } from '@common/utils';
 import apiStore, { ApiStore } from '@api/redux/store';
 import ApiState from '@api/state';
-import { Status, statusStop, statusBooting } from '.';
+import { Pid, TuneId, Status, PostMessage, statusTunning } from '.';
 import Sequence from '@common/Sequence';
+import { Unsubscribe } from '@reduxjs/toolkit';
 
 type ResponseType = {
   state: ApiState;
-  pid: string;
+  tuneId: string;
 };
 
 type Options = {
@@ -25,17 +26,27 @@ const optionsInit: Options = {
 };
 
 type Uid = string;
-type Pid = string;
+
+type TuneIds = {
+  [tuneId: TuneId]: {
+    pid: Pid;
+    store: ApiStore;
+    wssWorker: WssWorker;
+    status: Status;
+    unsubscribe: Unsubscribe;
+    resolve: (response: any) => void;
+    reject: (response: any) => void;
+  };
+};
 type GetGeneratePidErrorCode = string;
 
-const pidSeparator = generateQniqueKeySeparator;
-const limitPidCnt = 5;
+const separator = generateQniqueKeySeparator;
+const limitPidCnt = 10;
 
 export class StoresDispatcher {
   private uid: Uid;
-  private usePid: Pid;
-  private pids: { [pid: Pid]: { store: ApiStore; wssWorker: WssWorker } };
-  private status: Status;
+  private useTuneId: TuneId;
+  private tuneIds: TuneIds;
   private options: Options;
   constructor(options: Options = optionsInit) {
     this.getGeneratePidErrorCode = this.getGeneratePidErrorCode.bind(this);
@@ -43,106 +54,163 @@ export class StoresDispatcher {
     this.onError = this.onError.bind(this);
 
     this.uid = generateQniqueKey('uid');
-    this.usePid = '';
-    this.pids = {};
-    this.status = statusStop;
+    this.useTuneId = '';
+    this.tuneIds = {};
     this.options = optionsInit;
     this.options = options && options;
 
     // public api endpoint.
-    this.getPids = this.getPids.bind(this);
+    this.getTunePid = this.getTunePid.bind(this);
+    this.getTuneIds = this.getTuneIds.bind(this);
     this.getState = this.getState.bind(this);
     this.tune = this.tune.bind(this);
     this.untune = this.untune.bind(this);
     this.fetchRank = this.fetchRank.bind(this);
     this.fetchPosts = this.fetchPosts.bind(this);
-    this.fetchChDetail = this.fetchChDetail.bind(this);
+    this.fetchDetail = this.fetchDetail.bind(this);
     this.post = this.post.bind(this);
   }
 
-  public getPids(): string[] {
-    return Object.keys(this.pids);
+  public getTuneIds(): string[] {
+    return Object.keys(this.tuneIds);
   }
 
-  public getState(): ApiState {
-    if (this.usePid && this.pids[this.usePid]) {
-      return this.pids[this.usePid].store.getState() as ApiState;
+  public getState(tuneId?: string): ApiState {
+    const tuneIdKey = tuneId ? tuneId : this.useTuneId;
+    if (this.tuneIds[tuneIdKey]) {
+      return this.tuneIds[tuneIdKey].store.getState() as ApiState;
     }
-    throw `Error: No Exist Use Pid ${this.usePid}`;
+
+    // TODO
+    return {} as ApiState;
   }
 
-  private async getResponse(): Promise<ResponseType> {
+  private async getResponse(tuneId = this.useTuneId): Promise<ResponseType> {
     return new Promise((resolve) => {
-      const state = this.getState();
-      resolve({ state, pid: this.usePid });
+      const state = this.getState(tuneId);
+      resolve({ state, tuneId });
     });
   }
 
   public async tune(connection: string): Promise<ResponseType> {
     const generatePidErrorCode = this.getGeneratePidErrorCode(connection);
     if (generatePidErrorCode === '') {
-      const pid = generateQniqueKey(connection) + pidSeparator + this.uid;
-      this.usePid = pid;
-      this.status = statusBooting;
-      this.pids[pid] = { store: apiStore, wssWorker: new WssWorker() };
-      this.pids[pid].store.subscribe(() => this.subscribe(pid));
+      this.useTuneId = this.getTunePid(connection);
+      this.tuneIds[this.useTuneId] = {
+        pid: '',
+        store: apiStore,
+        wssWorker: new WssWorker(),
+        status: statusTunning,
+        unsubscribe: () => {},
+        resolve: () => {},
+        reject: () => {},
+      };
 
       // boot wssWorker.
-      this.pids[pid].wssWorker.onerror = this.onError;
-      this.pids[pid].wssWorker.onmessage = this.onMessage.bind(this);
+      this.tuneIds[this.useTuneId].wssWorker.onerror = this.onError;
+      this.tuneIds[this.useTuneId].wssWorker.onmessage = this.onMessage.bind(this);
 
-      const bootOption = { ...bootOptionInit };
+      const bootOption = { ...inits.bootOption, connection };
       const apiState = new ApiState({ bootOption });
-      this.pids[pid].store.dispatch({ ...apiState, type: this.status });
-      return await this.postMessage(pid, 'tune', { connection });
+      return await this.postMessage({ tuneId: this.useTuneId, method: 'tune', apiState });
     }
     console.warn(`Error: tune(${connection}) Message: ${generatePidErrorCode}`);
     return this.getResponse();
   }
 
-  public async untune(connection: string): Promise<ResponseType> {
-    if (this.usePid && this.pids[this.usePid]) {
-      const response = await this.postMessage(this.usePid, 'untune', { connection });
-      delete this.pids[this.usePid];
-      this.usePid = '';
+  // connection | tuneId
+  public async untune(prefixConnections: string | string[]): Promise<ResponseType> {
+    const connections = Array.isArray(prefixConnections) ? prefixConnections : [prefixConnections];
+    const untuneId = this.getTuneIds().find((tuneId) => {
+      return connections.find((connection) => tuneId.startsWith(`tuneId${separator}${connection}${separator}`));
+    });
+
+    if (untuneId) {
+      const tuneCh = { ...inits.ch };
+      const pid = this.tuneIds[untuneId].pid;
+      const response = await this.postMessage({ pid, tuneId: untuneId, method: 'untune', apiState: { tuneCh } });
+      delete this.tuneIds[untuneId];
+      this.useTuneId = this.useTuneId === untuneId ? '' : this.useTuneId;
       return response;
+    } else {
+      console.warn(`Error: untune(${prefixConnections})`);
     }
-    console.warn(`Error: untune(${connection})`);
     return this.getResponse();
   }
 
   public async fetchRank(connection: string): Promise<ResponseType> {
-    return await this.postMessage(this.usePid, 'tune', { connection });
+    const state = this.tuneIds[this.useTuneId].store.getState() as ApiState;
+    const tuneCh = { ...state.tuneCh, connection };
+    return await this.postMessage({ tuneId: this.useTuneId, method: 'fetchRank', apiState: { tuneCh } });
   }
 
   public async fetchPosts(connection: string): Promise<ResponseType> {
-    return await this.postMessage(this.usePid, 'fetchPosts', { connection });
+    const state = this.tuneIds[this.useTuneId].store.getState() as ApiState;
+    const tuneCh = { ...state.tuneCh, connection };
+    return await this.postMessage({ tuneId: this.useTuneId, method: 'fetchPosts', apiState: { tuneCh } });
   }
 
-  public async fetchChDetail(connection: string): Promise<ResponseType> {
-    return await this.postMessage(this.usePid, 'fetchChDetail', { connection });
+  public async fetchDetail(connection: string): Promise<ResponseType> {
+    const state = this.tuneIds[this.useTuneId].store.getState() as ApiState;
+    const tuneCh = { ...state.tuneCh, connection };
+    return await this.postMessage({ tuneId: this.useTuneId, method: 'fetchChDetail', apiState: { tuneCh } });
   }
 
   public async post(connection: string): Promise<ResponseType> {
-    return await this.postMessage(this.usePid, 'post', { connection });
+    const state = this.tuneIds[this.useTuneId].store.getState() as ApiState;
+    const tuneCh = { ...state.tuneCh, connection };
+    return await this.postMessage({ tuneId: this.useTuneId, method: 'post', apiState: { tuneCh } });
   }
 
-  private async postMessage(pid: string, method: string, params: any): Promise<ResponseType> {
-    return new Promise((resolve) => {
-      const type = `${Sequence.API_TO_SERVER_REQUEST}${method}`;
-      this.pids[pid].store.dispatch({ ...params, type });
-      this.pids[pid].wssWorker.postMessage({ pid, method, params });
+  private async postMessage(params: PostMessage): Promise<ResponseType> {
+    return new Promise((resolve, reject) => {
+      try {
+        const { pid: _pid, tuneId, method, apiState } = params;
+        this.tuneIds[tuneId].unsubscribe = this.tuneIds[tuneId].store.subscribe(() => {
+          if (this.tuneIds[tuneId]) {
+            const apiState = this.tuneIds[tuneId].store.getState() as ApiState;
+            const type = apiState.logs[0];
+            if (type.startsWith(Sequence.SERVER_TO_API_BROADCAST) || type.startsWith(Sequence.SERVER_TO_API_EMIT)) {
+              resolve({ tuneId, state: apiState });
+            }
+          }
+        });
+
+        const type = `${Sequence.API_TO_SERVER_REQUEST}${method}`;
+        const pid = _pid ? _pid : generateQniqueKey('pid');
+        this.tuneIds[tuneId].pid = pid;
+        this.tuneIds[tuneId].store.dispatch({ ...apiState, type });
+        this.tuneIds[tuneId].wssWorker.postMessage({ pid, tuneId, method, apiState });
+        console.log('POST MESSAGE', pid, tuneId);
+      } catch (err) {
+        reject(err);
+      }
     });
   }
 
   private onMessage(e: MessageEvent): void {
     const { currentTarget, data } = e;
     if (currentTarget instanceof Worker) {
-      const { pid, method, params } = data;
-      if (pid && method && params && params.type && this.pids[pid].store) {
-        const type = `${Sequence.SERVER_TO_API_BROADCAST}${method}`;
-        this.pids[pid].store.dispatch({ ...params, type });
-        console.log('DISPATCHED', pid);
+      // methodとapiState.typeの違いは？
+      const { pid, tuneId, method, apiState } = data;
+      if (pid && tuneId && method && apiState && apiState.type) {
+        let isExe = false;
+        if (apiState.type === 'untune') {
+          if (this.tuneIds[tuneId]) {
+            isExe = true;
+          }
+        } else {
+          if (this.tuneIds[tuneId] && this.tuneIds[tuneId].pid === pid) {
+            isExe = true;
+          }
+        }
+
+        if (isExe) {
+          console.log('ON MESSAGE EXE', pid, apiState.type, method);
+          apiState.type = `${Sequence.SERVER_TO_API_BROADCAST}${method}`;
+          this.tuneIds[tuneId].store.dispatch(apiState);
+          this.tuneIds[tuneId].unsubscribe();
+        }
       }
     }
   }
@@ -151,32 +219,56 @@ export class StoresDispatcher {
     console.warn(e);
   }
 
-  private async subscribe(pid: string): Promise<ResponseType> {
-    // console.log('SUBSCRIBE', pid);
-    return await this.getResponse();
+  private getTunePid(connection: string): string {
+    const { isTuneSameCh, isTuneMultiCh } = this.options;
+    const uniqueKey = generateQniqueKey(`tuneId${separator}${connection}`);
+    const newTunePid = uniqueKey + separator + this.uid;
+    const tuneIdCnt = this.getTuneIds().length;
+
+    if (isTuneSameCh && isTuneMultiCh) {
+      return newTunePid;
+    } else if (!isTuneSameCh && isTuneMultiCh) {
+      // 同じchは新しいtuneIdを許容しないが、異なるchは許容する
+      const tunedSameCh = Object.keys(this.tuneIds).find((tuneId) =>
+        Boolean(tuneId.startsWith(`tuneId${separator}${connection}${separator}`))
+      );
+      return tunedSameCh ? tunedSameCh : newTunePid;
+    } else if (isTuneSameCh && !isTuneMultiCh) {
+      // 同じchは新しいtuneIdを許容するが、異なるchは許容しない
+      const otherCh = Object.keys(this.tuneIds).find(
+        (tuneId) => !Boolean(tuneId.startsWith(`tuneId${separator}${connection}${separator}`))
+      );
+      return otherCh ? otherCh : newTunePid;
+    } else {
+      return tuneIdCnt === 1 ? Object.keys(this.tuneIds)[0] : newTunePid;
+    }
   }
 
   private getGeneratePidErrorCode(connection: string): GetGeneratePidErrorCode {
     const { isTuneSameCh, isTuneMultiCh } = this.options;
-    const pidCnt = this.getPids().length;
+    const tuneIdCnt = this.getTuneIds().length;
 
-    if (pidCnt === 0) {
+    if (tuneIdCnt === 0) {
       return '';
     } else {
-      if (pidCnt >= limitPidCnt) {
+      if (tuneIdCnt >= limitPidCnt) {
         return 'TUNE LIMIT';
       }
 
       if (isTuneSameCh && isTuneMultiCh) {
         return '';
       } else if (!isTuneSameCh && isTuneMultiCh) {
-        const isError = Boolean(Object.keys(this.pids).find((pid) => pid.startsWith(`${connection}${pidSeparator}`)));
+        const isError = Boolean(
+          Object.keys(this.tuneIds).find((tuneId) => tuneId.startsWith(`tuneId${separator}${connection}${separator}`))
+        );
         return isError ? 'BAD SAME CONNECTION' : '';
       } else if (isTuneSameCh && !isTuneMultiCh) {
-        const isError = Boolean(Object.keys(this.pids).find((pid) => !pid.startsWith(`${connection}${pidSeparator}`)));
+        const isError = Boolean(
+          Object.keys(this.tuneIds).find((tuneId) => !tuneId.startsWith(`tuneId${separator}${connection}${separator}`))
+        );
         return isError ? 'BAD MULTI CONNECTION#1' : '';
       } else {
-        const isError = Boolean(pidCnt >= 1);
+        const isError = Boolean(tuneIdCnt >= 1);
         return isError ? 'BAD MULTI CONNECTION#2' : '';
       }
     }
