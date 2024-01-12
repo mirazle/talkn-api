@@ -10,14 +10,17 @@
     "forceConsistentCasingInFileNames": true, // ファイル名の大文字小文字を一貫させることを強制します
     "types": ["node", "webpack-env"],
     "noImplicitAny": true,
+    "jsx": "react",
     "paths": {
       "@common/*": ["../talkn-common/src/*"],
-      "@api/*": ["./src/*"]
+      "@api/*": ["./src/*"],
+      "@visualizar/*": ["./visualizar/*"]
     }
   },
   // コンパイル対象
   "include": [
     "src/**/*.ts", // src ディレクトリ内のすべての TypeScript ファイル
+    "visualizar/**/*.ts", // src ディレクトリ内のすべての TypeScript ファイル
     "../talkn-common/src/**/*.ts" // talkn-common ディレクトリ内の TypeScript ファイル
   ],
   "exclude": [

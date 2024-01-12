@@ -2,7 +2,7 @@ import WssWorker from 'worker-loader?inline=fallback&publicPath=/&filename=WssWo
 
 import { inits } from '@common/models';
 import { generateQniqueKey, generateQniqueKeySeparator } from '@common/utils';
-import apiStore, { ApiStore } from '@api/redux/store';
+import { ApiStore, createApiStore } from '@api/redux/store';
 import ApiState from '@api/state';
 import { Pid, TuneId, Status, PostMessage, statusTunning } from '.';
 import Sequence from '@common/Sequence';
@@ -33,6 +33,7 @@ type TuneIds = {
     store: ApiStore;
     wssWorker: WssWorker;
     status: Status;
+    onChangeState: (state: ApiState) => void;
     unsubscribe: Unsubscribe;
     resolve: (response: any) => void;
     reject: (response: any) => void;
@@ -48,6 +49,7 @@ export class StoresDispatcher {
   private useTuneId: TuneId;
   private tuneIds: TuneIds;
   private options: Options;
+  private callback: (apiStates: ApiState[]) => void;
   constructor(options: Options = optionsInit) {
     this.getGeneratePidErrorCode = this.getGeneratePidErrorCode.bind(this);
     this.postMessage = this.postMessage.bind(this);
@@ -58,6 +60,7 @@ export class StoresDispatcher {
     this.tuneIds = {};
     this.options = optionsInit;
     this.options = options && options;
+    this.callback = () => {};
 
     // public api endpoint.
     this.getTunePid = this.getTunePid.bind(this);
@@ -69,6 +72,7 @@ export class StoresDispatcher {
     this.fetchPosts = this.fetchPosts.bind(this);
     this.fetchDetail = this.fetchDetail.bind(this);
     this.post = this.post.bind(this);
+    this.onStates = this.onStates.bind(this);
   }
 
   public getTuneIds(): string[] {
@@ -92,15 +96,16 @@ export class StoresDispatcher {
     });
   }
 
-  public async tune(connection: string): Promise<ResponseType> {
+  public async tune(connection: string, onChangeState = () => {}): Promise<ResponseType> {
     const generatePidErrorCode = this.getGeneratePidErrorCode(connection);
     if (generatePidErrorCode === '') {
       this.useTuneId = this.getTunePid(connection);
       this.tuneIds[this.useTuneId] = {
         pid: '',
-        store: apiStore,
+        store: createApiStore(),
         wssWorker: new WssWorker(),
         status: statusTunning,
+        onChangeState,
         unsubscribe: () => {},
         resolve: () => {},
         reject: () => {},
@@ -162,6 +167,10 @@ export class StoresDispatcher {
     return await this.postMessage({ tuneId: this.useTuneId, method: 'post', apiState: { tuneCh } });
   }
 
+  public async onStates(callback: (apiStates: ApiState[]) => void) {
+    this.callback = callback;
+  }
+
   private async postMessage(params: PostMessage): Promise<ResponseType> {
     return new Promise((resolve, reject) => {
       try {
@@ -171,6 +180,15 @@ export class StoresDispatcher {
             const apiState = this.tuneIds[tuneId].store.getState() as ApiState;
             const type = apiState.logs[0];
             if (type.startsWith(Sequence.SERVER_TO_API_BROADCAST) || type.startsWith(Sequence.SERVER_TO_API_EMIT)) {
+              this.tuneIds[tuneId].onChangeState(apiState);
+
+              const states = this.getTuneIds().map((tuneId) => {
+                const state = this.tuneIds[tuneId].store.getState() as ApiState;
+                console.log(state.tuneCh.connection, tuneId, state.tuneCh.tuneId, state);
+                return state;
+              }) as ApiState[];
+              this.callback(states);
+
               resolve({ tuneId, state: apiState });
             }
           }
@@ -181,7 +199,7 @@ export class StoresDispatcher {
         this.tuneIds[tuneId].pid = pid;
         this.tuneIds[tuneId].store.dispatch({ ...apiState, type });
         this.tuneIds[tuneId].wssWorker.postMessage({ pid, tuneId, method, apiState });
-        console.log('POST MESSAGE', pid, tuneId);
+        console.log('POST MESSAGE', tuneId);
       } catch (err) {
         reject(err);
       }
@@ -206,10 +224,12 @@ export class StoresDispatcher {
         }
 
         if (isExe) {
-          console.log('ON MESSAGE EXE', pid, apiState.type, method);
+          console.log('ON MESSAGE EXE', tuneId);
           apiState.type = `${Sequence.SERVER_TO_API_BROADCAST}${method}`;
           this.tuneIds[tuneId].store.dispatch(apiState);
-          this.tuneIds[tuneId].unsubscribe();
+          if (apiState.type === 'untune') {
+            this.tuneIds[tuneId].unsubscribe();
+          }
         }
       }
     }

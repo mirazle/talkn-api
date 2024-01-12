@@ -1,4 +1,4 @@
-import { PublicApiMethods } from '@api/public.api';
+import { PublicApiMethods } from '../../src/public.api';
 
 declare global {
   interface Window {

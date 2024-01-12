@@ -7,10 +7,9 @@ import { isValidKey } from '@common/utils';
 
 import WsClientToApiRequestActions from '@api/redux/actions/apiToServerRequest';
 
-import WssWorker, { Pid, TuneId, statusTuned, statusTunning, statusUnTunning } from '.';
+import WssWorker, { Pid, TuneId, statusTunning } from '.';
 import ApiState from '@api/state';
 import ChModel from '@common/models/Ch';
-import apiStore from '@api/redux/store';
 
 type SocketCustom = Socket & { _callbacks: { [key: string]: Function } };
 
@@ -53,10 +52,10 @@ export default class ToServer {
   }
 
   private tune(pid: Pid, tuneId: TuneId, { bootOption }: Partial<ApiState>): void {
-    const connection = bootOption ? bootOption.connection : ChModel.rootConnection;
-    const endpoint = `${Sequence.HTTPS_PROTOCOL}//${ToServer.domain}:${define.PORTS.SOCKET_IO}?connection=${connection}&tuneId=${tuneId}`;
+    const connection = bootOption ? ChModel.getConnection(bootOption.connection) : ChModel.rootConnection;
+    const endpoint = `${Sequence.HTTPS_PROTOCOL}//${ToServer.domain}:${define.PORTS.SOCKET_IO}?tuneId=${tuneId}`;
 
-    this.ios[tuneId] = io(endpoint, ToServer.option) as SocketCustom;
+    this.ios[tuneId] = io(endpoint, { ...ToServer.option, path: connection }) as SocketCustom;
     this.ios[tuneId].on('connect', () => this.wssWorker.postMessage({ pid, tuneId, method: statusTunning }));
 
     this.ios[tuneId].on('disconnect', () => {
@@ -108,7 +107,7 @@ export default class ToServer {
 
   private onResponseBoardcast(pid: Pid, tuneId: string, connection: string) {
     if (!this.ios[tuneId]._callbacks[connection]) {
-      this.ios[tuneId].on(connection, (response: any) => {
+      this.ios[tuneId].on(connection, (response: Partial<ApiState> & { type: string }) => {
         this.wssWorker.postMessage({ pid, tuneId, method: response.type, apiState: response });
       });
     }

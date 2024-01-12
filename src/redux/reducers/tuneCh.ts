@@ -6,5 +6,16 @@ type Action = {
 };
 
 export default (state: Types['Ch'] = inits.ch, action: Action) => {
-  return action.tuneCh ? { ...action.tuneCh } : state;
+  if (action.tuneCh) {
+    if (state.tuneId === '' && action.tuneCh.tuneId) {
+      return { ...action.tuneCh };
+    }
+    if (state.tuneId !== '' && state.tuneId === action.tuneCh.tuneId) {
+      return { ...action.tuneCh };
+    }
+    if (state.connection === action.tuneCh.connection) {
+      return { ...state, liveCnt: action.tuneCh.liveCnt };
+    }
+  }
+  return state;
 };

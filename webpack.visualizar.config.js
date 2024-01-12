@@ -6,10 +6,10 @@ const homeDir = os.homedir();
 module.exports = {
   cache: false,
   entry: {
-    javascript: path.resolve(__dirname, `./src`),
+    javascript: path.resolve(__dirname, `./visualizar`),
   },
   output: {
-    filename: `talkn.api.js`,
+    filename: `talkn.visualizar.js`,
     path: path.resolve(__dirname, `./dist/`),
   },
   module: {
@@ -24,6 +24,7 @@ module.exports = {
   resolve: {
     alias: {
       '@api': path.resolve(homeDir, 'talkn-api/src') + '/',
+      '@visualizar': path.resolve(homeDir, 'talkn-api/visualizar') + '/',
       '@common': path.resolve(homeDir, 'talkn-common/src') + '/',
     },
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -44,7 +45,7 @@ module.exports = {
         cert: path.resolve(homeDir, `talkn-common/certs/localhost.crt`),
       },
     },
-    port: 8000,
+    port: 8080,
   },
 
   //  plugins: [new BundleAnalyzerPlugin()],

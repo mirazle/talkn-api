@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "talkn server",
   "scripts": {
-    "dev": "webpack-cli serve --mode=development",
-    "build": "webpack --mode=production"
+    "dev": "concurrently \"webpack-cli serve --mode=development -c webpack.config.js\" \"webpack-cli serve --mode=development -c webpack.visualizar.config.js\"",
+    "api": "webpack-cli serve --mode=development -c webpack.config.js",
+    "vis": "webpack-cli serve --mode=development -c webpack.visualizar.config.js",
+    "build": "concurrently \"webpack --mode=production -c webpack.config.js\" \"webpack --mode=production -c webpack.visualizar.config.js\""
   },
   "author": "mirazle <mirazle2069@gmail.com> (https://github.com/mirazle)",
   "license": "ISC",
@@ -12,10 +14,13 @@
     "@babel/core": "^7.23.5",
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-typescript": "^7.23.3",
+    "@types/react": "^18.2.22",
+    "@types/react-dom": "^18.2.7",
     "@types/node": "^20.10.1",
     "@types/socket.io-client": "^3.0.0",
     "@types/webpack": "^5.28.5",
     "@types/webpack-env": "^1.18.4",
+    "concurrently": "^8.2.2",
     "redux-logger": "^3.0.6",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.1",
@@ -31,7 +36,10 @@
     "@reduxjs/toolkit": "2.0.1",
     "os-browserify": "^0.3.0",
     "process": "^0.11.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-redux": "9.0.1",
-    "socket.io-client": "4.7.2"
+    "socket.io-client": "4.7.2",
+    "styled-components": "6.1.1"
   }
 }

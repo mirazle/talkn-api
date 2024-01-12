@@ -18,6 +18,13 @@ const apiStore = configureStore({
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(apiMiddlewares),
 });
 
+export const createApiStore = () => {
+  return configureStore({
+    reducer: apiReducers,
+    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(apiMiddlewares),
+  });
+};
+
 if (process.env.NODE_ENV !== 'production' && module.hot) {
   module.hot.accept('@api/redux/reducers', () => {
     const newRootReducer = require('@api/redux/reducers').default;
