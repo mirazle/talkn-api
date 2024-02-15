@@ -4,12 +4,13 @@ import Sequence from '@common/Sequence';
 import conf from '@common/conf';
 import define from '@common/define';
 import { isValidKey } from '@common/utils';
-
+import ChModel from '@common/models/Ch';
+import { TuneOption, init as tuneOptionInit } from '@common/models/TuneOption';
 import WsClientToApiRequestActions from '@api/redux/actions/apiToServerRequest';
+import ApiState from '@api/state';
 
 import WssWorker, { Pid, TuneId, statusTunning } from '.';
-import ApiState from '@api/state';
-import ChModel from '@common/models/Ch';
+import BootOptionModel from '@common/models/BootOption';
 
 type SocketCustom = Socket & { _callbacks: { [key: string]: Function } };
 
@@ -22,7 +23,20 @@ export default class ToServer {
     return conf.env === define.DEVELOPMENT || conf.env === define.LOCALHOST ? define.DEVELOPMENT_DOMAIN : define.PRODUCTION_DOMAIN;
   }
   static get option() {
-    return { forceNew: true };
+    return {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+      transports: ['polling', 'websocket'],
+      upgrade: true,
+      forceNew: false,
+      query: {},
+      withCredentials: false,
+      extraHeaders: {},
+    };
   }
   constructor(wssWorker: WssWorker) {
     this.tune = this.tune.bind(this);
@@ -52,9 +66,17 @@ export default class ToServer {
   }
 
   private tune(pid: Pid, tuneId: TuneId, { bootOption }: Partial<ApiState>): void {
-    const connection = bootOption ? ChModel.getConnection(bootOption.connection) : ChModel.rootConnection;
-    const endpoint = `${Sequence.HTTPS_PROTOCOL}//${ToServer.domain}:${define.PORTS.SOCKET_IO}?tuneId=${tuneId}`;
+    let connection = ChModel.rootConnection;
+    let tuneOption: TuneOption = { ...tuneOptionInit };
+    let urlSearchParams = `?tuneId=${tuneId}`;
 
+    if (bootOption) {
+      connection = BootOptionModel.getConnection(bootOption.connection);
+      tuneOption = bootOption.tuneOption;
+      urlSearchParams += `&${BootOptionModel.getTuneOptionString(bootOption.tuneOption)}`;
+    }
+
+    const endpoint = `${Sequence.HTTPS_PROTOCOL}//${ToServer.domain}:${define.PORTS.IO_LB}${urlSearchParams}`;
     this.ios[tuneId] = io(endpoint, { ...ToServer.option, path: connection }) as SocketCustom;
     this.ios[tuneId].on('connect', () => this.wssWorker.postMessage({ pid, tuneId, method: statusTunning }));
 
@@ -65,10 +87,10 @@ export default class ToServer {
     });
 
     this.ios[tuneId].on('connect_error', (error) => {
-      console.error('Connection error:', error);
+      console.error('Connection error:', tuneId, error);
     });
     this.onResponseEmit(pid, tuneId, connection);
-    this.onResponseBoardcast(pid, tuneId, connection);
+    this.onResponseBoardcast(pid, tuneId, connection, tuneOption);
     this.onRequestMethods(pid, tuneId);
   }
 
@@ -105,10 +127,17 @@ export default class ToServer {
     }
   }
 
-  private onResponseBoardcast(pid: Pid, tuneId: string, connection: string) {
+  private onResponseBoardcast(pid: Pid, tuneId: string, connection: string, tuneOption: TuneOption) {
     if (!this.ios[tuneId]._callbacks[connection]) {
-      this.ios[tuneId].on(connection, (response: Partial<ApiState> & { type: string }) => {
+      const callback = (response: Partial<ApiState> & { type: string }) => {
         this.wssWorker.postMessage({ pid, tuneId, method: response.type, apiState: response });
+      };
+
+      this.ios[tuneId].on(connection, callback);
+      Object.keys(tuneOption).forEach((liveMethod) => {
+        if (isValidKey(liveMethod, tuneOptionInit) && tuneOption[liveMethod]) {
+          this.ios[tuneId].on(`${liveMethod}:${connection}`, callback);
+        }
       });
     }
   }

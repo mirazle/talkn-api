@@ -5,14 +5,14 @@ import bootOption from './bootOption';
 import posts from './posts';
 import postsTimeline from './postsTimeline';
 import postsTimelineStock from './postsTimelineStock';
-import ranks from './ranks';
+import rank from './rank';
 import chDetail from './chDetail';
 // import tunedChs from './tunedChs';
 import tuneCh from './tuneCh';
 
 export const reducers = {
   bootOption,
-  ranks,
+  rank,
   tuneCh,
   posts,
   postsTimeline,

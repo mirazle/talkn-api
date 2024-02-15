@@ -3,14 +3,14 @@ import { Types } from '@common/models';
 type Action = {
   type: string;
   tuneCh?: Types['Ch'];
-  ranks?: Types['Rank'][];
+  rank?: Types['Rank'][];
   posts?: Types['Post'][];
 };
 
 export default (state: Types['Rank'][] = [], action: Action) => {
-  const { posts, ranks, tuneCh } = action;
+  const { posts, rank, tuneCh } = action;
   let postsCnt = posts?.length || 0;
-  let ranksCnt = ranks?.length || 0;
+  let rankCnt = rank?.length || 0;
 
   const sortLiveCnt = (a: Types['Rank'], b: Types['Rank']) => {
     if (!tuneCh) return 0;
@@ -67,11 +67,11 @@ export default (state: Types['Rank'][] = [], action: Action) => {
       }
     case 'SERVER_TO_API[EMIT]:rank':
       // stateとaction.rankの両方存在する場合
-      if (state && state.length > 0 && ranks && ranksCnt > 0) {
+      if (state && state.length > 0 && rank && rankCnt > 0) {
         const newRanks = [];
-        let lastPost = ranks[0];
-        for (let i = 0; i < ranksCnt; i++) {
-          let newRank = ranks[i];
+        let lastPost = rank[0];
+        for (let i = 0; i < rankCnt; i++) {
+          let newRank = rank[i];
           lastPost = newRank.updateTime > lastPost.updateTime ? newRank : lastPost;
 
           if (newRank.connection === state[0].connection) {
@@ -89,9 +89,9 @@ export default (state: Types['Rank'][] = [], action: Action) => {
         newRanks[0].stampId = lastPost.stampId;
         return newRanks;
       } else {
-        return action.ranks ? action.ranks : state;
+        return action.rank ? action.rank : state;
       }
     default:
-      return action.ranks ? action.ranks : state;
+      return action.rank ? action.rank : state;
   }
 };

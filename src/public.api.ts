@@ -2,6 +2,7 @@ import { StoresDispatcher } from '@api/wssWorker/StoresDispatcher';
 
 export type PublicApiMethods = {
   ver: string;
+  uid: string;
   getTuneIds: Function;
   tune: Function;
   untune: Function;
@@ -15,13 +16,13 @@ export type PublicApiMethods = {
 
 export type PublicApiMethodKeys = keyof PublicApiMethods;
 
-// MEMO: 1インスタンスが複数のIOを持つのは違和感。1インスタンス1IOにして、ユーザーがコントロール出来るようにする。
 export default class PublicApi {
   constructor(storesDispatcher: StoresDispatcher) {
-    const { getTuneIds, tune, untune, fetchRank, fetchPosts, fetchDetail, post, getState, onStates } = storesDispatcher;
+    const { getTuneIds, uid, tune, untune, fetchRank, fetchPosts, fetchDetail, post, getState, onStates } = storesDispatcher;
 
     const publicApiMethods: PublicApiMethods = {
       ver: '2023/12/12',
+      uid,
       getTuneIds,
       tune,
       untune,
@@ -29,7 +30,6 @@ export default class PublicApi {
       fetchPosts,
       fetchDetail,
       post,
-      // use: (id: string) => api('use', id),
       getState,
       onStates,
     };
