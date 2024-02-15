@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { createRoot } from 'react-dom/client';
 import ApiState from '../src/state';
@@ -11,10 +11,26 @@ import { colors, getRgba } from './styles';
 type Props = {
   uid: string;
   options: RequiredOptions;
+  talknAPI: any;
   states?: ApiState[];
 };
 
-const Layout: React.FC<Props> = ({ uid, states, options }) => {
+const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
+  const inputRef = useRef(null);
+  const handleOnKeyDownTune = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const { value } = event.currentTarget as HTMLButtonElement;
+    if (event.key === 'Enter') {
+      talknAPI.tune(value, { rank: true });
+    }
+  };
+
+  const handleOnClickTune = () => {
+    if (inputRef.current) {
+      const elm = inputRef.current as HTMLInputElement;
+      talknAPI.tune(elm.value, { rank: true });
+    }
+  };
+
   return (
     <Container>
       <Header>talkn api visualizer</Header>
@@ -26,7 +42,11 @@ const Layout: React.FC<Props> = ({ uid, states, options }) => {
       <OptionMenu options={options}></OptionMenu>
       <br />
       <Visualizar states={states} />
-      <Footer></Footer>
+      <Footer>
+        <span>CH</span>
+        <input ref={inputRef} type="text" onKeyDown={handleOnKeyDownTune} />
+        <Button onClick={handleOnClickTune}>TUNE</Button>
+      </Footer>
     </Container>
   );
 };
@@ -70,7 +90,7 @@ type DuplicateProps = {
 };
 
 const Visualizar: React.FC<DuplicateProps> = ({ states = [] }) => {
-  const [isUniqueConnection, setIsUniqueConnection] = useState(false);
+  const [isUniqueConnection, setIsUniqueConnection] = useState(true);
   const [showStates, setShowStates] = useState(states);
 
   const setStatesLogic = (isUniqueConnection: boolean) => {
@@ -128,9 +148,9 @@ window.onload = () => {
     const isTuneMultiCh = Boolean(isAcceptOption && searchParams.get('isTuneMultiCh') === '1');
     const options = { isTuneSameCh, isTuneMultiCh } as RequiredOptions;
 
-    const callback = (states: ApiState[]) => root.render(<Layout uid={uid} states={states} options={options} />);
+    const callback = (states: ApiState[]) => root.render(<Layout uid={uid} states={states} talknAPI={talknAPI} options={options} />);
     talknAPI.onStates(callback);
-    root.render(<Layout uid={uid} options={options} />);
+    root.render(<Layout uid={uid} options={options} talknAPI={talknAPI} />);
   }
 };
 
@@ -143,6 +163,7 @@ const Container = styled.div`
   height: 100%;
   margin: 60px 0 80px;
   font-size: 14px;
+  font-weight: 300;
   font-family: 'Noto Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
   letter-spacing: 1px;
   color: ${getRgba(colors.normalFont)};
@@ -233,6 +254,20 @@ const OptionLi = styled.li<{ value: 0 | 1 }>`
   }
 `;
 
+const Button = styled.button<{ $active?: Boolean }>`
+  padding: 8px 16px;
+  border-radius: 8px;
+  outline: none;
+  border: 1px solid ${getRgba(colors.border)};
+  background: ${({ $active }) => ($active ? getRgba(colors.theme) : 'slategray')};
+  color: #eee;
+  cursor: pointer;
+  transition: 200ms;
+  &:hover {
+    background: ${({ $active }) => ($active ? 'slategray' : getRgba(colors.theme))};
+  }
+`;
+
 const Footer = styled.footer`
   position: fixed;
   bottom: 0;
@@ -244,18 +279,25 @@ const Footer = styled.footer`
   background: ${getRgba(colors.bgLightGray)};
   user-select: none;
   border-top: 1px solid ${getRgba(colors.border)};
-`;
 
-const Button = styled.button<{ $active: Boolean }>`
-  padding: 8px 16px;
-  border-radius: 8px;
-  outline: none;
-  border: 1px solid ${getRgba(colors.border)};
-  background: ${({ $active }) => ($active ? getRgba(colors.theme) : 'slategray')};
-  color: #eee;
-  cursor: pointer;
-  transition: 200ms;
-  &:hover {
-    background: ${({ $active }) => ($active ? 'slategray' : getRgba(colors.theme))};
+  span {
+    margin: 0 8px 0 16px;
+    font-weight: 400;
+  }
+
+  input {
+    flex: 1 1 auto;
+    border-radius: 8px;
+    outline: none;
+    line-height: 20px;
+    border: 0;
+    padding: 8px 16px;
+    margin: 0 8px;
+    color: ${getRgba(colors.normalFont)};
+    letter-spacing: 1px;
+  }
+
+  ${Button} {
+    margin: 0 8px;
   }
 `;

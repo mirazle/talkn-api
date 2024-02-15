@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
 import ApiState from '../../src/state';
+import { colors, getRgba } from '../styles';
 
 type SortTipsProps = {
   tableName: string;
@@ -45,7 +46,6 @@ type Props = {
 const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
   const [sort, setSort] = useState<Sort>({ tableName: 'tuneCh', columnName: 'tuneId', asc: true });
   const [showStates, setShowStates] = useState(states);
-
   const sortLogic = (a: ApiState, b: ApiState) => {
     const { tableName, columnName, asc } = sort;
     const key = tableName as keyof ApiState;
@@ -76,7 +76,6 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
 
   useEffect(() => {
     const sortedStates = showStates.sort(sortLogic);
-    console.log(sortedStates);
     setShowStates([...sortedStates]);
   }, [sort]);
 
@@ -141,15 +140,31 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
     } else {
       trs = showStates.map((stateParams, index) => {
         const state = new ApiState(stateParams);
-        const { tuneCh } = state;
+        const { tuneCh, posts, rank } = state;
+        const renderRank = () => {
+          if (rank.length === 0) return null;
+          const lis = rank.map((r, i) => {
+            const splited = r.connection.split('/');
+            const lastCon = splited[splited.length - 2];
+            const digits = String(r.liveCnt).length;
+            return (
+              <li key={i}>
+                <LiveCnt $digits={digits}>{r.liveCnt}</LiveCnt>
+                <span>{lastCon}</span>
+              </li>
+            );
+          });
+          return <ol className="rankOl">{lis}</ol>;
+        };
+
         return (
           <tr key={index}>
             {!isUniqueConnection && <td className="tuneCh_tuneId">{tuneCh.tuneId}</td>}
             <td className="tuneCh_connection">{tuneCh.connection}</td>
             <td className="tuneCh_server">{tuneCh.server}</td>
             <td className="tuneCh_liveCnt">{tuneCh.liveCnt}</td>
-            <td className="posts"></td>
-            <td className="rank"></td>
+            <td className="posts">{posts.length}</td>
+            <td className="rank">{renderRank()}</td>
             <td className="detail"></td>
             <td className="action">
               <select>
@@ -227,6 +242,17 @@ const Table = styled.table`
   td.tuneCh_liveCnt {
     text-align: center;
   }
+  td.rank {
+    ol {
+      padding: 0;
+      list-style: none;
+    }
+    li {
+      span {
+        margin-left: 8px;
+      }
+    }
+  }
   td.action {
     overflow: hidden;
     text-align: center;
@@ -251,4 +277,21 @@ const SortTipsContainer = styled.span``;
 const SortTip = styled.span`
   cursor: pointer;
   user-select: none;
+`;
+
+const LiveCnt = styled.span<{ $digits: number }>`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: ${getRgba(colors.theme)};
+  border-radius: 50%;
+  width: 14px;
+  min-width: 14px;
+  max-width: unset;
+  height: 14px;
+  min-height: 14px;
+  max-height: 14px;
+  padding: 8px;
+  font-size: 12px;
+  color: #eee;
 `;

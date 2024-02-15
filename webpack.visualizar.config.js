@@ -35,7 +35,6 @@ module.exports = {
   },
   plugins: [new webpack.HotModuleReplacementPlugin()],
   devServer: {
-    hot: true,
     allowedHosts: 'all',
     compress: true,
     server: {
