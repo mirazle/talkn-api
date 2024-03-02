@@ -1,5 +1,6 @@
 import io, { Socket } from 'socket.io-client';
 
+import BootOptionModel from '@common/models/BootOption';
 import Sequence from '@common/Sequence';
 import conf from '@common/conf';
 import define from '@common/define';
@@ -10,7 +11,6 @@ import WsClientToApiRequestActions from '@api/redux/actions/apiToServerRequest';
 import ApiState from '@api/state';
 
 import WssWorker, { Pid, TuneId, statusTunning } from '.';
-import BootOptionModel from '@common/models/BootOption';
 
 type SocketCustom = Socket & { _callbacks: { [key: string]: Function } };
 

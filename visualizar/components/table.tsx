@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
+import { Types } from '../../src/common/models';
 import ApiState from '../../src/state';
 import { colors, getRgba } from '../styles';
 
@@ -111,11 +112,14 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
             liveCnt <SortTips tableName={'tuneCh'} columnName={'liveCnt'} sort={sort} onClick={handleOnClickSort} />
           </TdLabelWrap>
         </td>
-        <td className="posts">
-          <TdLabelWrap>posts</TdLabelWrap>
-        </td>
         <td className="rank">
           <TdLabelWrap>rank</TdLabelWrap>
+        </td>
+        <td className="rankAll">
+          <TdLabelWrap>rankAll</TdLabelWrap>
+        </td>
+        <td className="posts">
+          <TdLabelWrap>posts</TdLabelWrap>
         </td>
         <td className="detail">
           <TdLabelWrap>detail</TdLabelWrap>
@@ -132,7 +136,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
     if (showStates.length === 0) {
       trs = [
         <tr key="noData" className="noData">
-          <td colSpan={!isUniqueConnection ? 8 : 7} align="center">
+          <td colSpan={!isUniqueConnection ? 9 : 8} align="center">
             NO DATA
           </td>
         </tr>,
@@ -140,17 +144,19 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
     } else {
       trs = showStates.map((stateParams, index) => {
         const state = new ApiState(stateParams);
-        const { tuneCh, posts, rank } = state;
-        const renderRank = () => {
-          if (rank.length === 0) return null;
-          const lis = rank.map((r, i) => {
-            const splited = r.connection.split('/');
-            const lastCon = splited[splited.length - 2];
+        const { tuneCh, posts, rank, rankAll } = state;
+        const { tuneId, connection, server, liveCnt } = tuneCh;
+        const digits = String(liveCnt).length;
+
+        const renderRank = (rankData: Types['Rank'][]) => {
+          if (!rankData || rankData.length === 0) return null;
+          const lis = rankData.map((r, i) => {
+            const showCon = r.connection.replace(connection, '');
             const digits = String(r.liveCnt).length;
             return (
               <li key={i}>
                 <LiveCnt $digits={digits}>{r.liveCnt}</LiveCnt>
-                <span>{lastCon}</span>
+                <span>{showCon}</span>
               </li>
             );
           });
@@ -159,12 +165,15 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
 
         return (
           <tr key={index}>
-            {!isUniqueConnection && <td className="tuneCh_tuneId">{tuneCh.tuneId}</td>}
-            <td className="tuneCh_connection">{tuneCh.connection}</td>
-            <td className="tuneCh_server">{tuneCh.server}</td>
-            <td className="tuneCh_liveCnt">{tuneCh.liveCnt}</td>
+            {!isUniqueConnection && <td className="tuneCh_tuneId">{tuneId}</td>}
+            <td className="tuneCh_connection">{connection}</td>
+            <td className="tuneCh_server">{server}</td>
+            <td className="tuneCh_liveCnt">
+              <LiveCnt $digits={digits}>{liveCnt}</LiveCnt>
+            </td>
+            <td className="rank">{renderRank(rank)}</td>
+            <td className="rankAll">{renderRank(rankAll)}</td>
             <td className="posts">{posts.length}</td>
-            <td className="rank">{renderRank()}</td>
             <td className="detail"></td>
             <td className="action">
               <select>
@@ -242,7 +251,8 @@ const Table = styled.table`
   td.tuneCh_liveCnt {
     text-align: center;
   }
-  td.rank {
+  td.rank,
+  td.rankAll {
     ol {
       padding: 0;
       list-style: none;

@@ -16,7 +16,7 @@ type Props = {
 };
 
 const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
-  const inputRef = useRef(null);
+  const inputTuneRef = useRef(null);
   const handleOnKeyDownTune = (event: React.KeyboardEvent<HTMLInputElement>) => {
     const { value } = event.currentTarget as HTMLButtonElement;
     if (event.key === 'Enter') {
@@ -25,9 +25,9 @@ const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
   };
 
   const handleOnClickTune = () => {
-    if (inputRef.current) {
-      const elm = inputRef.current as HTMLInputElement;
-      talknAPI.tune(elm.value, { rank: true });
+    if (inputTuneRef.current) {
+      const elm = inputTuneRef.current as HTMLInputElement;
+      talknAPI.tune(elm.value, { rank: true, rankAll: true });
     }
   };
 
@@ -44,7 +44,7 @@ const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
       <Visualizar states={states} />
       <Footer>
         <span>CH</span>
-        <input ref={inputRef} type="text" onKeyDown={handleOnKeyDownTune} />
+        <Input ref={inputTuneRef} type="text" onKeyDown={handleOnKeyDownTune} />
         <Button onClick={handleOnClickTune}>TUNE</Button>
       </Footer>
     </Container>
@@ -90,10 +90,13 @@ type DuplicateProps = {
 };
 
 const Visualizar: React.FC<DuplicateProps> = ({ states = [] }) => {
+  const searchInputRef = useRef(null);
   const [isUniqueConnection, setIsUniqueConnection] = useState(true);
+  const [filterConnectionInput, setFilterConnectionInput] = useState('');
   const [showStates, setShowStates] = useState(states);
 
-  const setStatesLogic = (isUniqueConnection: boolean) => {
+  const setStatesLogic = () => {
+    let fixStatus = states;
     if (isUniqueConnection) {
       const existConnection: string[] = [];
       let generateStates: ApiState[] = [];
@@ -102,31 +105,49 @@ const Visualizar: React.FC<DuplicateProps> = ({ states = [] }) => {
           existConnection.push(state.tuneCh.connection);
           generateStates.push(state);
         }
+        fixStatus = generateStates;
       });
-      setShowStates(generateStates.filter(({ tuneCh }) => tuneCh.liveCnt));
-    } else {
-      setShowStates(states.filter(({ tuneCh }) => tuneCh.liveCnt));
     }
+
+    if (filterConnectionInput) {
+      fixStatus = fixStatus.filter((fs) => fs.tuneCh.connection.startsWith(filterConnectionInput));
+    }
+    setShowStates(fixStatus.filter(({ tuneCh }) => tuneCh.liveCnt));
   };
 
   useEffect(() => {
+    setStatesLogic();
+  }, [isUniqueConnection, filterConnectionInput]);
+
+  useEffect(() => {
     if ((states !== showStates && states.length > 0) || showStates.length > 0) {
-      setStatesLogic(isUniqueConnection);
+      setStatesLogic();
     }
   }, [states]);
 
+  const handleOnChangefilterConnection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const elm = e.target as HTMLInputElement;
+    setFilterConnectionInput(elm.value);
+  };
+
   const handleOnClickUniqueConnection = () => {
     setIsUniqueConnection(!isUniqueConnection);
-    setStatesLogic(!isUniqueConnection);
   };
 
   return (
     <>
-      <DuplicateSection>
+      <CustomViewSection>
+        <Input
+          ref={searchInputRef}
+          type="text"
+          placeholder="filter connection"
+          onChange={handleOnChangefilterConnection}
+          value={filterConnectionInput}
+        />
         <Button $active={isUniqueConnection} onClick={handleOnClickUniqueConnection}>
           UNIQUE CONNECTION
         </Button>
-      </DuplicateSection>
+      </CustomViewSection>
       <Table isUniqueConnection={isUniqueConnection} states={showStates} />
     </>
   );
@@ -183,7 +204,7 @@ const Header = styled.header`
   border-bottom: 1px solid ${getRgba(colors.border)};
 `;
 
-const DuplicateSection = styled.section`
+const CustomViewSection = styled.section`
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -285,19 +306,19 @@ const Footer = styled.footer`
     font-weight: 400;
   }
 
-  input {
-    flex: 1 1 auto;
-    border-radius: 8px;
-    outline: none;
-    line-height: 20px;
-    border: 0;
-    padding: 8px 16px;
-    margin: 0 8px;
-    color: ${getRgba(colors.normalFont)};
-    letter-spacing: 1px;
-  }
-
   ${Button} {
     margin: 0 8px;
   }
+`;
+
+const Input = styled.input`
+  flex: 1 1 auto;
+  border-radius: 8px;
+  outline: none;
+  line-height: 20px;
+  border: 0;
+  padding: 8px 16px;
+  margin: 0 8px;
+  color: ${getRgba(colors.normalFont)};
+  letter-spacing: 1px;
 `;
