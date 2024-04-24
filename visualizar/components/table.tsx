@@ -149,6 +149,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
         const digits = String(liveCnt).length;
 
         const renderRank = (rankData: Types['Rank'][]) => {
+          console.log(rankData);
           if (!rankData || rankData.length === 0) return null;
           const lis = rankData.map((r, i) => {
             const showCon = r.connection.replace(connection, '');
