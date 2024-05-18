@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
-import { Types } from '../../src/common/models';
+import { Types } from '../../../talkn-common/src/models';
 import ApiState from '../../src/state';
 import { colors, getRgba } from '../styles';
 
@@ -118,6 +118,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
         <td className="rankAll">
           <TdLabelWrap>rankAll</TdLabelWrap>
         </td>
+        {/*
         <td className="posts">
           <TdLabelWrap>posts</TdLabelWrap>
         </td>
@@ -127,6 +128,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
         <td className="action">
           <TdLabelWrap>action</TdLabelWrap>
         </td>
+      */}
       </tr>
     </thead>
   );
@@ -136,7 +138,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
     if (showStates.length === 0) {
       trs = [
         <tr key="noData" className="noData">
-          <td colSpan={!isUniqueConnection ? 9 : 8} align="center">
+          <td colSpan={!isUniqueConnection ? 6 : 5} align="center">
             NO DATA
           </td>
         </tr>,
@@ -149,7 +151,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
         const digits = String(liveCnt).length;
 
         const renderRank = (rankData: Types['Rank'][]) => {
-          console.log(rankData);
+          // console.log('@@', tuneCh, rankData, typeof rankData);
           if (!rankData || rankData.length === 0) return null;
           const lis = rankData.map((r, i) => {
             const showCon = r.connection.replace(connection, '');
@@ -174,6 +176,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
             </td>
             <td className="rank">{renderRank(rank)}</td>
             <td className="rankAll">{renderRank(rankAll)}</td>
+            {/*
             <td className="posts">{posts.length}</td>
             <td className="detail"></td>
             <td className="action">
@@ -185,6 +188,7 @@ const Component: React.FC<Props> = ({ isUniqueConnection, states }) => {
                 <option>untune</option>
               </select>
             </td>
+        */}
           </tr>
         );
       });
@@ -220,7 +224,7 @@ const Table = styled.table`
   width: 98%;
   margin: 0 1%;
   thead {
-    background: rgb(79, 174, 159);
+    background: ${getRgba(colors.theme)};
     color: #eee;
   }
   tbody {

@@ -133,9 +133,9 @@ export default class ToServer {
         this.wssWorker.postMessage({ pid, tuneId, method: response.type, apiState: response });
       };
 
-      this.ios[tuneId].on(connection, callback);
-      Object.keys(tuneOption).forEach((liveMethod) => {
-        if (isValidKey(liveMethod, tuneOptionInit) && tuneOption[liveMethod]) {
+      this.ios[tuneId].on(`tune:${connection}`, callback);
+      Object.keys(tuneOptionInit).forEach((liveMethod) => {
+        if (isValidKey(liveMethod, tuneOptionInit)) {
           this.ios[tuneId].on(`${liveMethod}:${connection}`, callback);
         }
       });

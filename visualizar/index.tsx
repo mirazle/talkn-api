@@ -3,33 +3,56 @@ import styled from 'styled-components';
 import { createRoot } from 'react-dom/client';
 import ApiState from '../src/state';
 import { RequiredOptions, limitPidCnt } from '../src/wssWorker/StoresDispatcher';
-import define from '../src/common/define';
+import define from '../../talkn-common/src/define';
 
 import Table from './components/table';
 import { colors, getRgba } from './styles';
+import { ColorType, theme } from './styles/colors';
+import Button from './components/Button';
+
+const { PRODUCTION_DOMAIN, DEVELOPMENT_DOMAIN } = define;
 
 type Props = {
   uid: string;
   options: RequiredOptions;
+  sessionStore: string;
   talknAPI: any;
   states?: ApiState[];
 };
 
-const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
+const storeOptions = [
+  { label: '-', value: '' },
+  { label: 'STORE A', value: 'A' },
+  { label: 'STORE B', value: 'B' },
+  { label: 'STORE C', value: 'C' },
+  { label: 'STORE D', value: 'D' },
+  { label: 'STORE E', value: 'E' },
+];
+
+const Layout: React.FC<Props> = ({ uid, states, options, sessionStore, talknAPI }) => {
   const inputTuneRef = useRef(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+
   const handleOnKeyDownTune = (event: React.KeyboardEvent<HTMLInputElement>) => {
     const { value } = event.currentTarget as HTMLButtonElement;
     if (event.key === 'Enter') {
-      talknAPI.tune(value, { rank: true });
+      talknAPI.tune(value);
     }
   };
 
   const handleOnClickTune = () => {
     if (inputTuneRef.current) {
       const elm = inputTuneRef.current as HTMLInputElement;
-      talknAPI.tune(elm.value, { rank: true, rankAll: true });
+      talknAPI.tune(elm.value);
     }
   };
+
+  useEffect(() => {
+    if (states && isCapturing && sessionStore) {
+      const connections = states.map((state, i) => state.tuneCh.connection);
+      sessionStorage.setItem(`talknApiVisualizer:${sessionStore}`, JSON.stringify(connections));
+    }
+  }, [states, isCapturing]);
 
   return (
     <Container>
@@ -40,7 +63,15 @@ const Layout: React.FC<Props> = ({ uid, states, options, talknAPI }) => {
       </TuneCnt>
       <Uid>{uid}</Uid>
       <OptionMenu options={options}></OptionMenu>
-      <br />
+
+      <SelectSessionStore
+        options={options}
+        sessionStore={sessionStore}
+        talknAPI={talknAPI}
+        states={states}
+        isCapturing={isCapturing}
+        setIsCapturing={setIsCapturing}
+      />
       <Visualizar states={states} />
       <Footer>
         <span>CH</span>
@@ -82,6 +113,59 @@ const OptionMenu: React.FC<OptionMenuProps> = ({ options }) => {
         );
       })}
     </OptionUl>
+  );
+};
+
+type SelectSessionStoreProps = {
+  talknAPI: any;
+  sessionStore: string;
+  options: RequiredOptions;
+  states?: ApiState[];
+  isCapturing: boolean;
+  setIsCapturing: React.Dispatch<React.SetStateAction<boolean>>;
+};
+
+const SelectSessionStore: React.FC<SelectSessionStoreProps> = ({
+  talknAPI,
+  options,
+  sessionStore,
+  states,
+  isCapturing,
+  setIsCapturing,
+}) => {
+  const { isTuneMultiCh, isTuneSameCh } = options;
+  const handleOnClickCapturing = () => {
+    if (sessionStore) {
+      setIsCapturing(!isCapturing);
+    }
+  };
+  const handleOnClickClear = () => {
+    if (sessionStore) {
+      sessionStorage.setItem(`talknApiVisualizer:${sessionStore}`, '');
+      location.reload();
+    }
+  };
+  const handleOnChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const elm = e.target as HTMLSelectElement;
+    location.href = `?isTuneSameCh=${Number(isTuneSameCh)}&isTuneMultiCh=${Number(isTuneMultiCh)}&sessionStore=${elm.value}`;
+  };
+
+  return (
+    <CustomViewSection>
+      <Select onChange={handleOnChangeSelect} disabled={isCapturing} defaultValue={sessionStore}>
+        {storeOptions.map((radio) => (
+          <option key={radio.value} value={radio.value}>
+            {radio.label}
+          </option>
+        ))}
+      </Select>
+      <Button active bgHighlight theme="attention" onClick={handleOnClickCapturing} disabled={sessionStore === ''}>
+        {isCapturing ? '⚫︎ CAPTURING' : '◯ CAPTURE'}
+      </Button>
+      <Button active bgHighlight theme="darkBlue" onClick={handleOnClickClear} disabled={isCapturing || sessionStore === ''}>
+        ■ CLEAR
+      </Button>
+    </CustomViewSection>
   );
 };
 
@@ -144,10 +228,12 @@ const Visualizar: React.FC<DuplicateProps> = ({ states = [] }) => {
           onChange={handleOnChangefilterConnection}
           value={filterConnectionInput}
         />
-        <Button $active={isUniqueConnection} onClick={handleOnClickUniqueConnection}>
+
+        <Button active={isUniqueConnection} onClick={handleOnClickUniqueConnection}>
           UNIQUE CONNECTION
         </Button>
       </CustomViewSection>
+
       <Table isUniqueConnection={isUniqueConnection} states={showStates} />
     </>
   );
@@ -158,20 +244,30 @@ window.onload = () => {
   if (rootDom) {
     const root = createRoot(rootDom);
     const { hostname, search, protocol } = location;
-    const { PRODUCTION_DOMAIN, DEVELOPMENT_DOMAIN } = define;
     const talknAPI = (window as any).talknAPI;
     const uid = talknAPI.uid;
 
     const isAcceptOption = (protocol === 'https:' && hostname.startsWith(PRODUCTION_DOMAIN)) || hostname.startsWith(DEVELOPMENT_DOMAIN);
     const searchParams = new URLSearchParams(search);
-
     const isTuneSameCh = Boolean(isAcceptOption && searchParams.get('isTuneSameCh') === '1');
     const isTuneMultiCh = Boolean(isAcceptOption && searchParams.get('isTuneMultiCh') === '1');
     const options = { isTuneSameCh, isTuneMultiCh } as RequiredOptions;
 
-    const callback = (states: ApiState[]) => root.render(<Layout uid={uid} states={states} talknAPI={talknAPI} options={options} />);
+    const sessionStore = String(searchParams.get('sessionStore'));
+    if (sessionStore) {
+      const item = sessionStorage.getItem(`talknApiVisualizer:${sessionStore}`);
+      if (item) {
+        const connections = JSON.parse(item);
+        for (const i in connections) {
+          talknAPI.tune(connections[i]);
+        }
+      }
+    }
+
+    const callback = (states: ApiState[]) =>
+      root.render(<Layout uid={uid} states={states} talknAPI={talknAPI} options={options} sessionStore={sessionStore} />);
     talknAPI.onStates(callback);
-    root.render(<Layout uid={uid} options={options} talknAPI={talknAPI} />);
+    root.render(<Layout uid={uid} options={options} talknAPI={talknAPI} sessionStore={sessionStore} />);
   }
 };
 
@@ -209,7 +305,8 @@ const CustomViewSection = styled.section`
   align-items: center;
   justify-content: flex-end;
   width: 98%;
-  margin: 0 1% 8px;
+  margin: 8px;
+  gap: 8px;
 `;
 
 const TuneCnt = styled.div`
@@ -260,32 +357,18 @@ const OptionLi = styled.li<{ value: 0 | 1 }>`
     justify-content: center;
     width: 100%;
     height: 100%;
-    background: ${({ value }) => (value ? 'rgb(79, 174, 159)' : 'slategray')};
+    background: ${({ value }) => (value ? getRgba(colors.theme) : 'slategray')};
     color: ${({ value }) => (value ? '#eee' : '#fff')};
     text-decoration: none;
     transition: 200ms;
   }
 
   a:hover {
-    background: ${({ value }) => (value ? 'slategray' : 'rgb(79, 174, 159)')};
+    background: ${({ value }) => (value ? 'slategray' : getRgba(colors.theme))};
     color: ${({ value }) => (value ? '#eee' : '#eee')};
   }
   &:nth-child(1) {
     border-left: 0;
-  }
-`;
-
-const Button = styled.button<{ $active?: Boolean }>`
-  padding: 8px 16px;
-  border-radius: 8px;
-  outline: none;
-  border: 1px solid ${getRgba(colors.border)};
-  background: ${({ $active }) => ($active ? getRgba(colors.theme) : 'slategray')};
-  color: #eee;
-  cursor: pointer;
-  transition: 200ms;
-  &:hover {
-    background: ${({ $active }) => ($active ? 'slategray' : getRgba(colors.theme))};
   }
 `;
 
@@ -305,10 +388,6 @@ const Footer = styled.footer`
     margin: 0 8px 0 16px;
     font-weight: 400;
   }
-
-  ${Button} {
-    margin: 0 8px;
-  }
 `;
 
 const Input = styled.input`
@@ -321,4 +400,9 @@ const Input = styled.input`
   margin: 0 8px;
   color: ${getRgba(colors.normalFont)};
   letter-spacing: 1px;
+`;
+
+const Select = styled.select`
+  padding: 8px 16px 8px 8px;
+  border-radius: 8px;
 `;

@@ -97,7 +97,7 @@ export const map = {
   [white]: { rgba: 'rgba(255, 255, 255, 1)' },
   [black]: { rgba: 'rgba(0, 0, 0, 1)' },
   [themeLight]: { rgba: 'rgba(99, 194, 179, 1)' },
-  [theme]: { rgba: 'rgba(79, 174, 159, 1)' },
+  [theme]: { rgba: 'rgba(69, 164, 149, 1)' },
   [unactive]: { rgba: 'rgba(140, 140, 160, 1)' },
   [attention]: { rgba: 'rgba(254, 59, 31, 1)' },
   [warning]: { rgba: 'rgba(247, 142, 4, 1)' },
