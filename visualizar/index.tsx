@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { createRoot } from 'react-dom/client';
 import ApiState from '../src/state';
 import { RequiredOptions, limitPidCnt } from '../src/wssWorker/StoresDispatcher';
-import define from '../../talkn-common/src/define';
+import define from '../common/src/define';
 
 import Table from './components/table';
 import { colors, getRgba } from './styles';

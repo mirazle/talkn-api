@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
-import { Types } from '../../../talkn-common/src/models';
+import { Types } from '../../common/src/models';
 import ApiState from '../../src/state';
 import { colors, getRgba } from '../styles';
 
