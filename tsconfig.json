@@ -12,7 +12,7 @@
     "noImplicitAny": true,
     "jsx": "react",
     "paths": {
-      "@common/*": ["../talkn-common/src/*"],
+      "@common/*": ["common/src/*"],
       "@api/*": ["./src/*"],
       "@visualizar/*": ["./visualizar/*"]
     }
@@ -21,7 +21,7 @@
   "include": [
     "src/**/*.ts", // src ディレクトリ内のすべての TypeScript ファイル
     "visualizar/**/*.ts", // src ディレクトリ内のすべての TypeScript ファイル
-    "../talkn-common/src/**/*.ts" // talkn-common ディレクトリ内の TypeScript ファイル
+    "common/src/**/*.ts" // talkn-common ディレクトリ内の TypeScript ファイル
   ],
   "exclude": [
     "node_modules", // node_modules ディレクトリを除外します

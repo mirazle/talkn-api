@@ -23,9 +23,9 @@ module.exports = {
   },
   resolve: {
     alias: {
-      '@api': path.resolve(homeDir, 'talkn-api/src') + '/',
-      '@visualizar': path.resolve(homeDir, 'talkn-api/visualizar') + '/',
-      '@common': path.resolve(homeDir, 'talkn-common/src') + '/',
+      '@api': path.resolve(__dirname, 'src') + '/',
+      '@visualizar': path.resolve(__dirname, 'visualizar') + '/',
+      '@common': path.resolve(__dirname, 'common/src') + '/',
     },
     extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     fallback: {
@@ -40,8 +40,8 @@ module.exports = {
     server: {
       type: 'https',
       options: {
-        key: path.resolve(homeDir, `talkn-common/certs/localhost.key`),
-        cert: path.resolve(homeDir, `talkn-common/certs/localhost.crt`),
+        key: path.resolve(__dirname, `common/certs/localhost.key`),
+        cert: path.resolve(__dirname, `common/certs/localhost.crt`),
       },
     },
     port: 8080,
