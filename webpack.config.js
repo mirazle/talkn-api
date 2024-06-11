@@ -9,7 +9,7 @@ module.exports = {
     javascript: path.resolve(__dirname, `./src`),
   },
   output: {
-    filename: `talkn.api.js`,
+    filename: `talkn.api.v2.js`,
     path: path.resolve(__dirname, `./dist/`),
   },
   module: {

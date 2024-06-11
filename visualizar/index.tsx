@@ -7,7 +7,6 @@ import define from '../../talkn-common/src/define';
 
 import Table from './components/table';
 import { colors, getRgba } from './styles';
-import { ColorType, theme } from './styles/colors';
 import Button from './components/Button';
 
 const { PRODUCTION_DOMAIN, DEVELOPMENT_DOMAIN } = define;
@@ -247,12 +246,11 @@ window.onload = () => {
     const talknAPI = (window as any).talknAPI;
     const uid = talknAPI.uid;
 
-    const isAcceptOption = (protocol === 'https:' && hostname.startsWith(PRODUCTION_DOMAIN)) || hostname.startsWith(DEVELOPMENT_DOMAIN);
+    const isAcceptOption = true;
     const searchParams = new URLSearchParams(search);
     const isTuneSameCh = Boolean(isAcceptOption && searchParams.get('isTuneSameCh') === '1');
     const isTuneMultiCh = Boolean(isAcceptOption && searchParams.get('isTuneMultiCh') === '1');
     const options = { isTuneSameCh, isTuneMultiCh } as RequiredOptions;
-
     const sessionStore = String(searchParams.get('sessionStore'));
     if (sessionStore) {
       const item = sessionStorage.getItem(`talknApiVisualizer:${sessionStore}`);
@@ -266,7 +264,9 @@ window.onload = () => {
 
     const callback = (states: ApiState[]) =>
       root.render(<Layout uid={uid} states={states} talknAPI={talknAPI} options={options} sessionStore={sessionStore} />);
+
     talknAPI.onStates(callback);
+
     root.render(<Layout uid={uid} options={options} talknAPI={talknAPI} sessionStore={sessionStore} />);
   }
 };
